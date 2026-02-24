@@ -65,6 +65,61 @@
         .criteria-item {
             flex: 1;
             min-width: 200px;
+            cursor: pointer;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            transition: border-color 0.2s, opacity 0.2s;
+            user-select: none;
+        }
+
+        .criteria-item:hover {
+            border-color: var(--border);
+        }
+
+        .criteria-item.active {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.06);
+        }
+
+        .criteria-item.inactive {
+            opacity: 0.4;
+        }
+
+        .criteria-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .criteria-toggle {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid var(--border);
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .criteria-item.active .criteria-toggle {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .criteria-toggle svg {
+            width: 12px;
+            height: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .criteria-item.active .criteria-toggle svg {
+            opacity: 1;
         }
 
         .criteria-item h3 {
@@ -72,11 +127,12 @@
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 6px;
+            margin: 0;
         }
 
         .criteria-item p {
             font-size: 14px;
+            margin-left: 26px;
         }
 
         .controls {
@@ -339,16 +395,37 @@
         </header>
 
         <div class="criteria-box">
-            <div class="criteria-item">
-                <h3>条件1: 株価</h3>
+            <div class="criteria-item active" data-criteria="high" onclick="toggleCriteria(this)">
+                <div class="criteria-header">
+                    <div class="criteria-toggle">
+                        <svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2">
+                            <polyline points="2,6 5,9 10,3"/>
+                        </svg>
+                    </div>
+                    <h3>条件1: 株価</h3>
+                </div>
                 <p>過去2年間で直近に最高値圏（98%以上）を記録</p>
             </div>
-            <div class="criteria-item">
-                <h3>条件2: PER</h3>
+            <div class="criteria-item active" data-criteria="per" onclick="toggleCriteria(this)">
+                <div class="criteria-header">
+                    <div class="criteria-toggle">
+                        <svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2">
+                            <polyline points="2,6 5,9 10,3"/>
+                        </svg>
+                    </div>
+                    <h3>条件2: PER</h3>
+                </div>
                 <p>10倍〜30倍（赤字→黒字転換銘柄はPER制限免除）</p>
             </div>
-            <div class="criteria-item">
-                <h3>加点: CWH</h3>
+            <div class="criteria-item active" data-criteria="cwh" onclick="toggleCriteria(this)">
+                <div class="criteria-header">
+                    <div class="criteria-toggle">
+                        <svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2">
+                            <polyline points="2,6 5,9 10,3"/>
+                        </svg>
+                    </div>
+                    <h3>加点: CWH</h3>
+                </div>
                 <p>カップウィズハンドルパターンを自動検出・スコアリング</p>
             </div>
         </div>
@@ -380,6 +457,17 @@
     <script>
         let isRunning = false;
 
+        function toggleCriteria(el) {
+            if (isRunning) return;
+            el.classList.toggle('active');
+            el.classList.toggle('inactive', !el.classList.contains('active'));
+        }
+
+        function getActiveCriteria() {
+            const items = document.querySelectorAll('.criteria-item.active');
+            return Array.from(items).map(el => el.dataset.criteria);
+        }
+
         async function runScreening() {
             if (isRunning) return;
             isRunning = true;
@@ -405,6 +493,11 @@
             const params = new URLSearchParams();
             if (tickerInput) {
                 params.set('tickers', tickerInput);
+            }
+
+            const criteria = getActiveCriteria();
+            if (criteria.length > 0) {
+                params.set('criteria', criteria.join(','));
             }
 
             try {

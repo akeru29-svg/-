@@ -35,6 +35,13 @@ def screen():
     else:
         tickers = DEFAULT_TICKERS
 
+    # 適用する条件を取得（デフォルトは全条件ON）
+    criteria_param = request.args.get("criteria", "high,per,cwh").strip()
+    active_criteria = set(c.strip() for c in criteria_param.split(",") if c.strip())
+    use_high = "high" in active_criteria
+    use_per = "per" in active_criteria
+    use_cwh = "cwh" in active_criteria
+
     def generate():
         total = len(tickers)
         found = 0
@@ -51,15 +58,21 @@ def screen():
                 info = data["info"]
                 hist = data["history"]
 
+                # 条件1: 2年高値チェック（常に算出、フィルタはON時のみ）
                 high_result = check_two_year_high(hist)
-                if not high_result["is_near_high"]:
+                if use_high and not high_result["is_near_high"]:
                     continue
 
+                # 条件2: PERチェック（常に算出、フィルタはON時のみ）
                 per_result = check_per_criteria(info)
-                if not per_result["passes"]:
+                if use_per and not per_result["passes"]:
                     continue
 
-                cwh_result = detect_cup_with_handle(hist)
+                # CWH検出（ONの場合のみ実行）
+                if use_cwh:
+                    cwh_result = detect_cup_with_handle(hist)
+                else:
+                    cwh_result = {"has_pattern": False}
 
                 name = info.get("longName") or info.get("shortName") or ticker
                 sector = info.get("sector", "N/A")
