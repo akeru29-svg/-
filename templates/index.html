@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>株式スクリーナー｜2年高値 &amp; PER &amp; CWH</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --border: #2a2d3a;
+            --text: #e4e4e7;
+            --text-muted: #8b8d98;
+            --accent: #3b82f6;
+            --green: #22c55e;
+            --red: #ef4444;
+            --gold: #f59e0b;
+            --purple: #a855f7;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        header {
+            text-align: center;
+            padding: 32px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 32px;
+        }
+
+        header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .criteria-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .criteria-item {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .criteria-item h3 {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .criteria-item p {
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--accent);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover { opacity: 0.85; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .ticker-input {
+            flex: 1;
+            min-width: 280px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .ticker-input::placeholder { color: var(--text-muted); }
+
+        .progress {
+            margin-bottom: 24px;
+            display: none;
+        }
+
+        .progress.active { display: block; }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        .progress-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .results-count {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .results-count strong {
+            color: var(--green);
+        }
+
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+        }
+
+        .stock-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: border-color 0.2s;
+        }
+
+        .stock-card:hover { border-color: var(--accent); }
+
+        .stock-card.has-cwh {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 1px var(--gold);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+
+        .card-ticker {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .card-name {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .badge {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-cwh {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--gold);
+        }
+
+        .badge-turnaround {
+            background: rgba(168, 85, 247, 0.15);
+            color: var(--purple);
+        }
+
+        .badge-high {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--green);
+        }
+
+        .card-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .metric-value.positive { color: var(--green); }
+        .metric-value.negative { color: var(--red); }
+
+        .card-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-muted);
+        }
+
+        .cwh-detail {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .cwh-detail h4 {
+            font-size: 12px;
+            color: var(--gold);
+            margin-bottom: 6px;
+        }
+
+        .cwh-detail .cwh-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .cwh-detail .cwh-stat {
+            font-size: 12px;
+        }
+
+        .cwh-detail .cwh-stat span {
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 640px) {
+            .stock-grid {
+                grid-template-columns: 1fr;
+            }
+            .criteria-box {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Stock Screener</h1>
+            <p>2年高値更新 × PER 10〜30倍 × カップウィズハンドル検出</p>
+        </header>
+
+        <div class="criteria-box">
+            <div class="criteria-item">
+                <h3>条件1: 株価</h3>
+                <p>過去2年間で直近に最高値圏（98%以上）を記録</p>
+            </div>
+            <div class="criteria-item">
+                <h3>条件2: PER</h3>
+                <p>10倍〜30倍（赤字→黒字転換銘柄はPER制限免除）</p>
+            </div>
+            <div class="criteria-item">
+                <h3>加点: CWH</h3>
+                <p>カップウィズハンドルパターンを自動検出・スコアリング</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <input type="text" class="ticker-input" id="tickerInput"
+                   placeholder="ティッカーを追加（カンマ区切り, 例: 7203.T, 9984.T）空欄でデフォルト銘柄を使用">
+            <button class="btn" id="runBtn" onclick="runScreening()">
+                スクリーニング実行
+            </button>
+        </div>
+
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">準備中...</div>
+        </div>
+
+        <div id="resultsCount" class="results-count" style="display:none;"></div>
+        <div class="stock-grid" id="results"></div>
+
+        <div class="empty-state" id="emptyState">
+            <h3>スクリーニング待機中</h3>
+            <p>「スクリーニング実行」ボタンを押して、条件に合致する銘柄を検索します。</p>
+        </div>
+    </div>
+
+    <script>
+        let isRunning = false;
+
+        async function runScreening() {
+            if (isRunning) return;
+            isRunning = true;
+
+            const btn = document.getElementById('runBtn');
+            const progress = document.getElementById('progress');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const results = document.getElementById('results');
+            const emptyState = document.getElementById('emptyState');
+            const resultsCount = document.getElementById('resultsCount');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>実行中...';
+            progress.classList.add('active');
+            progressFill.style.width = '0%';
+            progressText.textContent = 'データ取得中...';
+            results.innerHTML = '';
+            resultsCount.style.display = 'none';
+            emptyState.style.display = 'none';
+
+            const tickerInput = document.getElementById('tickerInput').value.trim();
+            const params = new URLSearchParams();
+            if (tickerInput) {
+                params.set('tickers', tickerInput);
+            }
+
+            try {
+                // Start screening
+                const response = await fetch('/api/screen?' + params.toString());
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const data = JSON.parse(line.slice(6));
+
+                        if (data.type === 'progress') {
+                            const pct = Math.round((data.current / data.total) * 100);
+                            progressFill.style.width = pct + '%';
+                            progressText.textContent =
+                                `${data.current}/${data.total} 銘柄を分析中... (${data.found} 件ヒット)`;
+                        } else if (data.type === 'result') {
+                            results.appendChild(createStockCard(data.stock));
+                        } else if (data.type === 'complete') {
+                            progressFill.style.width = '100%';
+                            progressText.textContent = '完了';
+                            resultsCount.innerHTML =
+                                `<strong>${data.total_found}</strong> 件が条件に合致 / ${data.total_screened} 銘柄を分析`;
+                            resultsCount.style.display = 'block';
+
+                            if (data.total_found === 0) {
+                                emptyState.innerHTML =
+                                    '<h3>該当銘柄なし</h3><p>条件に合致する銘柄は見つかりませんでした。</p>';
+                                emptyState.style.display = 'block';
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                progressText.textContent = 'エラーが発生しました: ' + e.message;
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'スクリーニング実行';
+            isRunning = false;
+
+            setTimeout(() => { progress.classList.remove('active'); }, 2000);
+        }
+
+        function createStockCard(stock) {
+            const card = document.createElement('div');
+            card.className = 'stock-card' + (stock.cwh.has_pattern ? ' has-cwh' : '');
+
+            const badges = [];
+            if (stock.cwh.has_pattern && stock.cwh.has_handle) {
+                badges.push('<span class="badge badge-cwh">CWH</span>');
+            } else if (stock.cwh.has_pattern) {
+                badges.push('<span class="badge badge-cwh">Cup</span>');
+            }
+            if (stock.is_turnaround) {
+                badges.push('<span class="badge badge-turnaround">黒字転換</span>');
+            }
+            if (stock.pct_from_high >= -2) {
+                badges.push('<span class="badge badge-high">高値圏</span>');
+            }
+
+            let cwhDetail = '';
+            if (stock.cwh.has_pattern) {
+                cwhDetail = `
+                    <div class="cwh-detail">
+                        <h4>Cup with Handle パターン検出</h4>
+                        <div class="cwh-stats">
+                            <div class="cwh-stat">
+                                <span>カップ深さ</span><br>${stock.cwh.cup_depth_pct}%
+                            </div>
+                            <div class="cwh-stat">
+                                <span>ハンドル</span><br>${stock.cwh.has_handle ? stock.cwh.handle_depth_pct + '%' : 'なし'}
+                            </div>
+                            <div class="cwh-stat">
+                                <span>スコア</span><br>${stock.cwh.score}/100
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            const priceFormatted = stock.current_price.toLocaleString('ja-JP', {
+                maximumFractionDigits: 0
+            });
+            const highFormatted = stock.two_year_high.toLocaleString('ja-JP', {
+                maximumFractionDigits: 0
+            });
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div>
+                        <div class="card-ticker">${stock.ticker}</div>
+                        <div class="card-name">${stock.name}</div>
+                    </div>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
+                        ${badges.join('')}
+                    </div>
+                </div>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <span class="metric-label">現在値</span>
+                        <span class="metric-value">¥${priceFormatted}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">2年高値</span>
+                        <span class="metric-value">¥${highFormatted}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">高値比</span>
+                        <span class="metric-value ${stock.pct_from_high >= 0 ? 'positive' : 'negative'}">
+                            ${stock.pct_from_high >= 0 ? '+' : ''}${stock.pct_from_high}%
+                        </span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">PER</span>
+                        <span class="metric-value">${stock.per}倍</span>
+                    </div>
+                </div>
+                <div class="card-tags">
+                    <span class="tag">${stock.sector}</span>
+                    <span class="tag">${stock.industry}</span>
+                    <span class="tag">${stock.market_cap_str}</span>
+                </div>
+                ${cwhDetail}
+            `;
+
+            return card;
+        }
+    </script>
+</body>
+</html>
