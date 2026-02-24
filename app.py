@@ -5,7 +5,27 @@ Flask + SSE でリアルタイム進捗表示付きスクリーニングを提�
 """
 
 import json
+import numpy as np
 from flask import Flask, render_template, request, Response, stream_with_context
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """numpy型をJSON化できるようにするエンコーダー"""
+    def default(self, obj):
+        if isinstance(obj, (np.integer,)):
+            return int(obj)
+        if isinstance(obj, (np.floating,)):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+
+
+def _dumps(obj):
+    """numpy型対応のJSON直列化"""
+    return json.dumps(obj, cls=NumpyEncoder, ensure_ascii=False)
+
+
 from screener import (
     run_screening,
     fetch_stock_data,
@@ -48,7 +68,7 @@ def screen():
 
         for i, ticker in enumerate(tickers):
             # 進捗通知
-            yield f"data: {json.dumps({'type': 'progress', 'current': i + 1, 'total': total, 'found': found, 'ticker': ticker})}\n\n"
+            yield f"data: {_dumps({'type': 'progress', 'current': i + 1, 'total': total, 'found': found, 'ticker': ticker})}\n\n"
 
             try:
                 data = fetch_stock_data(ticker)
@@ -96,12 +116,12 @@ def screen():
                 }
 
                 found += 1
-                yield f"data: {json.dumps({'type': 'result', 'stock': stock})}\n\n"
+                yield f"data: {_dumps({'type': 'result', 'stock': stock})}\n\n"
 
             except Exception:
                 continue
 
-        yield f"data: {json.dumps({'type': 'complete', 'total_found': found, 'total_screened': total})}\n\n"
+        yield f"data: {_dumps({'type': 'complete', 'total_found': found, 'total_screened': total})}\n\n"
 
     return Response(
         stream_with_context(generate()),
