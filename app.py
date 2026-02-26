@@ -7,6 +7,7 @@ Flask + SSE でリアルタイム進捗表示付きスクリーニングを提�
 import json
 import numpy as np
 from flask import Flask, render_template, request, Response, stream_with_context
+from flask_cors import CORS
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -37,6 +38,7 @@ from screener import (
 )
 
 app = Flask(__name__)
+CORS(app)
 
 
 @app.route("/")
